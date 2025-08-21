@@ -175,9 +175,10 @@ from PIL import Image
 st.set_page_config(page_title="AI Fortune Teller", page_icon="🔮", layout="centered")
 st.title("🔮 AI Fortune Teller")
 st.warning(
-    "⚠️ Heads up! The fortune results are AI-generated. "
-    "Neither UST nor the Data Serivces team can be held responsible for them. "
-    "We kindly ask you not to take photos of the generated results."
+    "⚠️ **Heads up!**\n"
+    "The fortune results are AI-generated.\n"
+    "Neither **UST** nor the **Data Services** team is responsible.\n"
+    "Please avoid taking photos of the generated results."
 )
 # -----------------------------
 # Face Detection Processor
@@ -219,23 +220,34 @@ ctx = webrtc_streamer(
 # Fortune Teller Actions
 # -----------------------------
 # Display current fortune if it exists
-if "fortune" in st.session_state:
-    st.success(f"**Your Fortune:** {st.session_state['fortune']}")
+# if "fortune" in st.session_state:
+#     st.success(f"**Your Fortune:** {st.session_state['fortune']}")
 
 # Generate new fortune
-if ctx.video_processor and st.button("✨ Tell Fortune"):
-    frame_bgr = ctx.video_processor.last_frame
-    if frame_bgr is not None:
-        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(frame_rgb)
-        image_b64 = encode_image_to_base64(pil_img)
+if ctx.video_processor:
+    if st.button("✨ Tell Fortune"):
+        # Clear previous fortune & related states BEFORE anything else
+        st.session_state["fortune"] = None
+        st.session_state["fortune_img"] = None
+        st.session_state["download_path"] = None
+        st.session_state["show_save_form"] = False
 
-        with st.spinner("Consulting the stars..."):
-            fortune = get_fortune_from_groq(image_b64)
+        frame_bgr = ctx.video_processor.last_frame
+        if frame_bgr is not None:
+            frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+            pil_img = Image.fromarray(frame_rgb)
+            image_b64 = encode_image_to_base64(pil_img)
 
-        st.session_state["fortune"] = fortune
-        st.session_state["fortune_img"] = pil_img
-        st.success(f"**Your Fortune:** {fortune}")
+            with st.spinner("Consulting the stars..."):
+                fortune = get_fortune_from_groq(image_b64)
+
+            # Store new fortune in session state
+            st.session_state["fortune"] = fortune
+            st.session_state["fortune_img"] = pil_img
+
+# Display the fortune ONLY if it exists
+if st.session_state.get("fortune") and st.session_state.get("fortune_img"):
+    st.success(f"**Your Fortune:** {st.session_state['fortune']}")
 
 # Initialize state for Save form
 if "show_save_form" not in st.session_state:
